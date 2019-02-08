@@ -1,0 +1,122 @@
+#include <CapacitiveSensor.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+//LiquidCrystal_I2C lcd(0x27, 20, 4); // Zet het i2c adres op 0x38 20 karakters en 4 regels.
+
+/*
+ * CapitiveSense Library Demo Sketch
+ * Paul Badger 2008
+ * Uses a high value resistor e.g. 10 megohm between send pin and receive pin
+ * Resistor effects sensitivity, experiment with values, 50 kilohm - 50 megohm. Larger resistor values yield larger sensor values.
+ * Receive pin is the sensor pin - try different amounts of foil/metal on this pin
+ * Best results are obtained if sensor foil and wire is covered with an insulator such as paper or plastic sheet
+ * 
+ * Aangepast door jan Middel op 06-02-2019
+ */
+
+
+
+CapacitiveSensor   cs_4_5 = CapacitiveSensor(4,5);        // 10 megohm resistor between pins 4 & 6, pin 6 is sensor pin, add wire, foil
+CapacitiveSensor   cs_4_8 = CapacitiveSensor(4,8);        // 10 megohm resistor between pins 4 & 8, pin 8 is sensor pin, add wire, foil
+
+int Down = 12;
+int Up = 11;
+int Teller_fout = 0; // Variable die verhoogd wordt als er een schakelaar bedient wordt. Is om te controleren dat er om een een af andere reden de schakelaar blijf "hangen"
+//Na een bepallde tijd ± 10 seconder gaat het sysyteem op slot
+
+
+
+
+
+
+void setup()                    
+{
+
+   cs_4_8.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
+   Serial.begin(9600);
+  pinMode (Down , OUTPUT);
+  pinMode (Up , OUTPUT);
+  //lcd.init();                      // initialize the lcd
+
+  // Zet een melding op het scherm.
+  //lcd.backlight();
+ 
+}
+
+
+// Hier staat een subroutine die de Ardunio herstart in geval van een fout.
+
+void software_Reset() // Restarts program from beginning but does not reset the peripherals and registers
+{
+    asm volatile ("  jmp 0");  
+    Teller_fout = 0;
+    
+    delay (500);
+}  
+void loop()                    
+{
+    long start = millis();
+  
+    long total2 =  cs_4_5.capacitiveSensor(30);
+    long total3 =  cs_4_8.capacitiveSensor(30);
+
+   
+// Hier worden de waardes via de seriele poort geprint
+// Als alles goed werkt dan den deze regels uitschakelen 
+
+   Serial.print("\t");
+   Serial.print(total2);                  // print sensor output 2
+   Serial.print("\t");
+   Serial.println(total3);                // print sensor output 3
+
+    delay(10);                             // arbitrary delay to limit data to serial port 
+    
+  // Controle op status van waarde total3 DIT is de ORANJE kabel.
+                if (total3 > 1000)
+                
+            {
+              digitalWrite (Down,HIGH);
+              
+              if (Teller_fout >25)
+                  software_Reset();
+                  else
+                  {
+                    Teller_fout ++;
+                  }
+                  
+            }
+            else
+            {
+              digitalWrite (Down,LOW);
+              Teller_fout =0;
+            }
+
+ // Controle op waarde total2  DIT is de GELE kabel.
+      
+             if (total2 >1000)
+
+            {
+              digitalWrite (Up,HIGH);
+
+                if (Teller_fout >25)
+                  software_Reset();
+                  else
+                  {
+                    Teller_fout ++;
+                  }
+            }
+            else
+            {
+              digitalWrite (Up,LOW);
+              
+            } 
+            
+      
+          
+                  
+              delay(100);
+              
+             
+                
+}
